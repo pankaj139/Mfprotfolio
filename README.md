@@ -170,10 +170,13 @@ Full interactive docs at `/docs` (Swagger UI).
 
 ## Deployment
 
-See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for step-by-step deployment on:
-- **Vercel** (frontend — free)
-- **Render** (backend — free tier)
-- Automated CI/CD via **GitHub Actions**
+See **[docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md)** for the complete, click-by-click setup guide covering:
+- **Render** backend deployment (Web Service + optional PostgreSQL)
+- **Vercel** frontend deployment
+- **GitHub Actions** CI/CD secrets configuration
+- Troubleshooting, custom domains, and production hardening
+
+Architecture overview and quick reference in **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 ---
 
