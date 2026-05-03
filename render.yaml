@@ -14,6 +14,9 @@ services:
         generateValue: true          # Render auto-generates a secure random value
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "1440"
+      # DATABASE_URL — set this manually in the Render dashboard to your Supabase
+      # connection string (see docs/SETUP_GUIDE.md §2.8).
+      # Falls back to SQLite (ephemeral) if not set.
       - key: DATABASE_URL
         value: "sqlite:///./mf_portfolio.db"
     healthCheckPath: /health

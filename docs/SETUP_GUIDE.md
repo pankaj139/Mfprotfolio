@@ -2,7 +2,7 @@
 
 This guide walks you through every step required to deploy the MF Portfolio Intelligence app on **Render** (backend) and **Vercel** (frontend) — both completely free, no credit card required.
 
-**Time required:** ~25 minutes
+**Time required:** ~30 minutes
 
 ---
 
@@ -17,7 +17,7 @@ This guide walks you through every step required to deploy the MF Portfolio Inte
    - 2.5 [Add environment variables](#25-add-environment-variables)
    - 2.6 [Deploy and verify](#26-deploy-and-verify)
    - 2.7 [Copy the deploy hook URL](#27-copy-the-deploy-hook-url)
-   - 2.8 [(Optional) Add PostgreSQL for persistence](#28-optional-add-postgresql-for-persistent-storage)
+   - 2.8 [Add free PostgreSQL via Supabase](#28-add-free-postgresql-via-supabase-recommended)
 3. [Deploy Frontend on Vercel](#3-deploy-frontend-on-vercel)
    - 3.1 [Create Vercel account](#31-create-a-vercel-account)
    - 3.2 [Import the project](#32-import-the-github-repository)
@@ -124,7 +124,7 @@ Copy the output and paste it as the value for `SECRET_KEY`.
 
 > **Never share or commit your SECRET_KEY.** It signs all JWTs; if leaked, anyone can forge authentication tokens.
 
-Leave `DATABASE_URL` blank for now — the app defaults to SQLite. See [section 2.8](#28-optional-add-postgresql-for-persistent-storage) if you need persistent data.
+Leave `DATABASE_URL` blank for now — the app defaults to SQLite (ephemeral). Follow [section 2.8](#28-add-free-postgresql-via-supabase-recommended) right after your first deploy to wire up free persistent PostgreSQL via Supabase.
 
 ---
 
@@ -177,25 +177,66 @@ The deploy hook lets GitHub Actions trigger a new deployment automatically.
 
 ---
 
-### 2.8 (Optional) Add PostgreSQL for Persistent Storage
+### 2.8 Add Free PostgreSQL via Supabase (Recommended)
 
-The free Render tier uses ephemeral storage — the SQLite database is wiped every time the service redeploys. If you want data to persist across deploys, add a free PostgreSQL database:
+The free Render tier uses **ephemeral storage** — the SQLite database is wiped every time the service redeploys. Any funds you add manually are lost on the next deploy.
 
-1. On the Render Dashboard, click **New + → PostgreSQL**
-2. Fill in:
+**Render's built-in PostgreSQL add-on is paid.** Use [Supabase](https://supabase.com) instead — it offers a permanently free PostgreSQL database (500 MB, no expiry).
+
+> **Alternative:** [Neon](https://neon.tech) also offers a free serverless PostgreSQL (0.5 GB). The steps are nearly identical — swap the connection string.
+
+#### Step 1 — Create a Supabase account
+
+1. Open [https://supabase.com](https://supabase.com)
+2. Click **Start your project**
+3. Click **Continue with GitHub** and authorise Supabase
+4. You land on the **Supabase Dashboard**
+
+#### Step 2 — Create a new project
+
+1. Click **New project**
+2. Choose your **Organisation** (your personal org is fine)
+3. Fill in:
    - **Name:** `mf-portfolio-db`
-   - **Region:** Same as your Web Service (Singapore)
-   - **Plan:** Free
-3. Click **Create Database**
-4. Once created, go to the database page and copy the **Internal Database URL**
-   (it looks like `postgresql://user:password@dpg-xxx-a.singapore-postgres.render.com/mf_portfolio`)
-5. Go back to your **mf-portfolio-api** Web Service → **Environment** tab
-6. Add a new variable:
-   - **Key:** `DATABASE_URL`
-   - **Value:** _(paste the Internal Database URL)_
-7. Click **Save Changes** — Render triggers a redeploy automatically
+   - **Database Password:** create a strong password and **save it somewhere safe** — you'll need it in step 3
+   - **Region:** `Southeast Asia (Singapore)` — matches the Render region
+4. Click **Create new project**
+5. Wait **~2 minutes** for Supabase to provision the database (you'll see a progress bar)
 
-> The free PostgreSQL instance on Render expires after 90 days and has a 1 GB storage limit.
+#### Step 3 — Copy the connection string
+
+1. In your project, click the **Settings** icon (gear ⚙️) in the left sidebar
+2. Click **Database** under *Configuration*
+3. Scroll down to the **Connection string** section
+4. Make sure the **URI** tab is selected
+5. You'll see a string like:
+   ```
+   postgresql://postgres:[YOUR-PASSWORD]@db.abcdefghijkl.supabase.co:5432/postgres
+   ```
+6. Click **Copy** — then replace `[YOUR-PASSWORD]` with the password you set in Step 2
+
+> **Important:** Use the **direct connection** (port `5432`), not the pooler (port `6543`). SQLAlchemy's built-in connection pool works correctly on port 5432.
+
+#### Step 4 — Add the connection string to Render
+
+1. Go back to your Render Dashboard → **mf-portfolio-api** Web Service
+2. Click the **Environment** tab (left sidebar)
+3. Find the existing `DATABASE_URL` variable and click **Edit**
+4. Replace the SQLite value with your Supabase connection string:
+   ```
+   postgresql://postgres:your_password@db.xxxx.supabase.co:5432/postgres
+   ```
+5. Click **Save Changes**
+6. Render triggers an automatic redeploy — wait ~2 minutes for it to complete
+
+#### Step 5 — Verify persistence
+
+1. Visit your app and log in with the demo credentials
+2. Add a new fund from the Portfolio page
+3. Trigger a manual redeploy in Render (Dashboard → service → **Manual Deploy → Deploy latest commit**)
+4. After the redeploy completes, log back in — your added fund should still be there
+
+> **Free tier limits:** Supabase free tier includes 500 MB storage and 2 free projects. No expiry, no credit card required.
 
 ---
 
@@ -483,9 +524,9 @@ allow_origins=[
 
 Commit and push — Render will redeploy automatically.
 
-### 7.2 Use PostgreSQL instead of SQLite
+### 7.2 Use Supabase PostgreSQL instead of SQLite
 
-Follow [section 2.8](#28-optional-add-postgresql-for-persistent-storage) to add a Render PostgreSQL instance. Without this, the demo portfolio data is re-seeded fresh on every deploy (existing user-added funds are wiped).
+Follow [section 2.8](#28-add-free-postgresql-via-supabase-recommended) to connect a free Supabase PostgreSQL instance. Without this, the demo portfolio data is re-seeded fresh on every deploy (any funds you manually added are wiped).
 
 ### 7.3 Keep the Render backend awake (free tier fix)
 
@@ -505,7 +546,7 @@ UptimeRobot will now ping your backend every 5 minutes, preventing it from sleep
 ### 7.4 Production Checklist
 
 - [ ] `SECRET_KEY` is a random 64-character hex string (not the default)
-- [ ] `DATABASE_URL` points to a Render PostgreSQL instance
+- [ ] `DATABASE_URL` points to a Supabase PostgreSQL instance
 - [ ] CORS `allow_origins` restricted to your Vercel domain
 - [ ] `VITE_API_URL` set correctly in Vercel environment variables
 - [ ] All 5 GitHub Secrets configured
@@ -579,7 +620,7 @@ The demo user is seeded when the backend starts for the first time. If you're us
 1. Wait ~30 seconds after the service restarts for the seed to complete
 2. Try logging in again — the demo user is re-created on every fresh start
 
-If using PostgreSQL, the user persists and this issue won't occur.
+If using Supabase PostgreSQL (see [section 2.8](#28-add-free-postgresql-via-supabase-recommended)), the user persists across deploys and this issue won't occur.
 
 ---
 
@@ -587,7 +628,7 @@ If using PostgreSQL, the user persists and this issue won't occur.
 
 This is expected behaviour on the free tier with SQLite (ephemeral disk). The seed data (demo user + 5 funds) is re-created automatically, but any funds you manually added will be gone.
 
-**Solution:** Add a [Render PostgreSQL database](#28-optional-add-postgresql-for-persistent-storage) and set the `DATABASE_URL` environment variable.
+**Solution:** Follow [section 2.8](#28-add-free-postgresql-via-supabase-recommended) to connect a free Supabase PostgreSQL database and set `DATABASE_URL` in Render — data will then persist across all redeploys.
 
 ---
 
