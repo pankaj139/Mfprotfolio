@@ -1,7 +1,7 @@
 """Seed service — populates demo portfolio with realistic Indian mutual fund data."""
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from models import Fund, HoldingSnapshot, SectorSnapshot, Alert, FundMetadata
+from models import Fund, HoldingSnapshot, SectorSnapshot, Alert, FundMetadata, User
 
 
 DEMO_FUNDS = [
@@ -279,9 +279,22 @@ ALERT_SEEDS = [
 ]
 
 
+def seed_demo_user(db: Session) -> None:
+    from auth import hash_password  # local import to avoid circular at module load
+    if db.query(User).first():
+        return
+    db.add(User(
+        email="demo@mfportfolio.com",
+        full_name="Demo Investor",
+        hashed_password=hash_password("Demo@1234"),
+    ))
+    db.commit()
+
+
 def seed_database(db: Session) -> None:
+    seed_demo_user(db)
     if db.query(Fund).first():
-        return  # Already seeded
+        return  # portfolio data already seeded
 
     fund_map: dict[str, Fund] = {}
     for fd in DEMO_FUNDS:

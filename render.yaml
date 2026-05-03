@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: mf-portfolio-api
+    runtime: python
+    region: singapore
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true          # Render auto-generates a secure random value
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: DATABASE_URL
+        value: "sqlite:///./mf_portfolio.db"
+    healthCheckPath: /health
+    autoDeploy: true

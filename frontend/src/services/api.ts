@@ -1,4 +1,9 @@
 import axios from "axios";
+
+// In dev, Vite proxies /api → localhost:8000.
+// In production (Vercel), VITE_API_URL is set to the Render backend URL.
+const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}` : "";
+
 import type {
   Fund,
   HoldingsComparison,
@@ -10,7 +15,7 @@ import type {
   DashboardSummary,
 } from "../types";
 
-const api = axios.create({ baseURL: "/api" });
+const api = axios.create({ baseURL: `${BASE}/api` });
 
 // Portfolio
 export const getPortfolio = () =>

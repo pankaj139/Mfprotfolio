@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import Base, engine, SessionLocal
-from models import Fund, HoldingSnapshot, SectorSnapshot, Alert, FundMetadata  # noqa: F401 — ensure models are registered
+from models import User, Fund, HoldingSnapshot, SectorSnapshot, Alert, FundMetadata  # noqa: F401
 from services.seed_service import seed_database
+from auth import get_current_user
 from routers import portfolio, holdings, sectors, performance, alerts, news, dashboard
+from routers.auth_router import router as auth_router
 
 
 @asynccontextmanager
@@ -34,15 +36,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(portfolio.router, prefix="/api/portfolio", tags=["Portfolio"])
-app.include_router(holdings.router, prefix="/api/holdings", tags=["Holdings"])
-app.include_router(sectors.router, prefix="/api/sectors", tags=["Sectors"])
-app.include_router(performance.router, prefix="/api/performance", tags=["Performance"])
-app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
-app.include_router(news.router, prefix="/api/news", tags=["News"])
-app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+# Public — no auth required
+app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+
+# Protected — all routes below require a valid JWT
+_auth = [Depends(get_current_user)]
+app.include_router(portfolio.router,    prefix="/api/portfolio",    tags=["Portfolio"],    dependencies=_auth)
+app.include_router(holdings.router,     prefix="/api/holdings",     tags=["Holdings"],     dependencies=_auth)
+app.include_router(sectors.router,      prefix="/api/sectors",      tags=["Sectors"],      dependencies=_auth)
+app.include_router(performance.router,  prefix="/api/performance",  tags=["Performance"],  dependencies=_auth)
+app.include_router(alerts.router,       prefix="/api/alerts",       tags=["Alerts"],       dependencies=_auth)
+app.include_router(news.router,         prefix="/api/news",         tags=["News"],         dependencies=_auth)
+app.include_router(dashboard.router,    prefix="/api/dashboard",    tags=["Dashboard"],    dependencies=_auth)
 
 
-@app.get("/health")
+@app.get("/health", tags=["Health"])
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": "1.0.0"}
